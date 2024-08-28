@@ -1,0 +1,32 @@
+name: Testing Testpulse
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+      - name: Build and run tests
+        run: ./gradlew clean test
+      - uses: actions/setup-python@v5
+        if: '!cancelled()'
+        with:
+          python-version: '3.11'
+      - name: Upload to testpulse
+        if: '!cancelled()'
+        env:
+          TESTPULSE_TOKEN: ${{ secrets.TESTPULSE_TOKEN }}
+        run: |
+          pip install testpulse-uploader
+          testpulse-upload -tr "build/test-results/test/.*\.xml" -cr "build/reports/jacoco/test/.*\.xml" --config-file .testpulse.yaml
